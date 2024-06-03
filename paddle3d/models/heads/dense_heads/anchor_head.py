@@ -221,14 +221,15 @@ class AnchorHeadSingle(nn.Layer):
         negatives = box_cls_labels == 0
         negative_cls_weights = negatives * 1.0
         cls_weights = (negative_cls_weights + 1.0 * positives)
-        reg_weights = positives
+        reg_weights = positives.cast("int64")
         if self.num_class == 1:
             # class agnostic
             box_cls_labels[positives] = 1
 
         pos_normalizer = positives.sum(1, keepdim=True)
         reg_weights /= paddle.clip(pos_normalizer, min=1.0)
-        cls_weights /= paddle.clip(pos_normalizer, min=1.0)
+        cls_weights /= paddle.clip(
+            pos_normalizer, min=1.0).cast(cls_weights.dtype)
         cls_targets = box_cls_labels * cared.cast(box_cls_labels.dtype)
 
         one_hot_targets = []
@@ -257,7 +258,7 @@ class AnchorHeadSingle(nn.Layer):
         positives = box_cls_labels > 0
         reg_weights = positives.cast("float32")
         pos_normalizer = positives.sum(1, keepdim=True)
-        reg_weights /= paddle.clip(pos_normalizer, min=1.0)
+        reg_weights /= paddle.clip(pos_normalizer, min=1.0).cast("float32")
 
         anchors = self.anchors
 

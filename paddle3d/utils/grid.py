@@ -63,7 +63,8 @@ def normalize_coords(coords, shape):
 
     shape = paddle.flip(shape, axis=[0])  # Reverse ordering of shape
     # Subtract 1 since pixel indexing from [0, shape - 1]
-    norm_coords = coords / (shape - 1) * (max_n - min_n) + min_n
+    norm_coords = coords / (
+        (shape - 1) * (max_n - min_n) + min_n).cast(coords.dtype)
     return norm_coords
 
 

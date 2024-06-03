@@ -85,7 +85,7 @@ class Balancer(nn.Layer):
         num_pixels = fg_mask.sum() + bg_mask.sum()
 
         # Compute losses
-        loss *= weights
+        loss *= weights.cast(loss.dtype)
         fg_loss = loss[fg_mask.cast("bool")].sum() / num_pixels
         bg_loss = loss[bg_mask.cast("bool")].sum() / num_pixels
         # Get total loss
