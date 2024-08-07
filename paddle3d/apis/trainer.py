@@ -257,12 +257,12 @@ class Trainer:
                     self.optimizer,
                     level=amp_cfg.get("level", "O1"),
                     dtype=amp_cfg.get("dtype", "float16"))
-            else:
-                _, self.optimizer = paddle.amp.decorate(
-                    self.model,
-                    self.optimizer,
-                    level=amp_cfg.get("level", "O1"),
-                    dtype=amp_cfg.get("dtype", "float16"))
+            # else:
+            #     _, self.optimizer = paddle.amp.decorate(
+            #         self.model,
+            #         self.optimizer,
+            #         level=amp_cfg.get("level", "O1"),
+            #         dtype=amp_cfg.get("dtype", "float16"))
 
             amp_cfg.pop('use_amp', False)
             self.amp_cfg = amp_cfg
