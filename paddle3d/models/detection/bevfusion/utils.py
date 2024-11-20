@@ -247,7 +247,7 @@ def box3d_multiclass_nms(mlvl_bboxes,
             dir_scores.append(paddle.gather(_mlvl_dir_scores, selected))
 
     # there is a det
-    if bboxes:
+    if len(bboxes) > 0:
         bboxes = paddle.concat(bboxes, axis=0)
         scores = paddle.concat(scores, axis=0)
         labels = paddle.concat(labels, axis=0)

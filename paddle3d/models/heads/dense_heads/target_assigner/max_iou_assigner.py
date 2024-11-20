@@ -325,7 +325,8 @@ class MaxIoUAssigner(object):
 
         # 3. assign positive: above positive IoU threshold
         pos_inds = max_overlaps >= self.pos_iou_thr
-        assigned_gt_inds[pos_inds] = argmax_overlaps[pos_inds] + 1
+        assigned_gt_inds = paddle.where(pos_inds, argmax_overlaps + 1,
+                                        assigned_gt_inds)
 
         if self.match_low_quality:
             # Low-quality matching will overwrite the assigned_gt_inds assigned

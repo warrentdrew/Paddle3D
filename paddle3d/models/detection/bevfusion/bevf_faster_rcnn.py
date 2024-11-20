@@ -183,14 +183,9 @@ class BEVFFasterRCNN(MVXFasterRCNN):
                 trans.append(trans_list)
             rots = paddle.stack(rots)
             trans = paddle.stack(trans)
-            lidar2img_rt = img_metas[sample_idx]['lidar2img']
 
             img_bev_feat, depth_dist = self.lift_splat_shot_vis(
-                img_feats_view,
-                rots,
-                trans,
-                lidar2img_rt=lidar2img_rt,
-                img_metas=img_metas)
+                img_feats_view, rots, trans)
             if pts_feats is None:
                 pts_feats = [img_bev_feat]
             else:
@@ -207,8 +202,9 @@ class BEVFFasterRCNN(MVXFasterRCNN):
                     ]
                     if self.se:
                         pts_feats = [self.seblock(pts_feats[0])]
-        return dict(
-            img_feats=img_feats, pts_feats=pts_feats, depth_dist=depth_dist)
+            return dict(
+                img_feats=img_feats, pts_feats=pts_feats, depth_dist=depth_dist)
+        return dict(img_feats=img_feats, pts_feats=pts_feats, depth_dist=None)
 
     def export_forward(self, points, img, img_metas):
         """
@@ -219,7 +215,7 @@ class BEVFFasterRCNN(MVXFasterRCNN):
         """
         # only for bs=1 forward
         # img_metas and points should be a list
-        img_metas = [img_metas]
+        img_metas = [{'lidar2img': [img_metas[i, ...] for i in range(6)]}]
         points = [points]
         bbox_list = self.simple_test(points, img_metas, img)
         return bbox_list
@@ -324,18 +320,13 @@ class BEVFFasterRCNN(MVXFasterRCNN):
     def export(self, save_dir, **kwargs):
         self.forward = self.export_forward
         self.pts_middle_encoder.export_model = True
-        self.lift_splat_shot_vis = True
+        self.lift_splat_shot_vis.export_model = True
         img_spec = paddle.static.InputSpec(
             shape=[1 * 6, 3, 448, 800], dtype='float32', name='img')
         pts_spec = paddle.static.InputSpec(
             shape=[-1, 4], dtype='float32', name='pts')
-        img_metas_spec = {
-            'lidar2img': [
-                paddle.static.InputSpec(
-                    shape=[4, 4], dtype='float32', name='lidar2img')
-                for i in range(6)
-            ]
-        }
+        img_metas_spec = paddle.static.InputSpec(
+            shape=[6, 4, 4], dtype='float32', name='lidar2img')
         input_spec = [pts_spec, img_spec, img_metas_spec]
 
         save_path = os.path.join(save_dir, 'bevfusion')

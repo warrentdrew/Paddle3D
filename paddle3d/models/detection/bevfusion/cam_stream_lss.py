@@ -389,16 +389,7 @@ class LiftSplatShoot(nn.Layer):
         bev = bev.transpose([0, 1, 3, 2])
         return bev
 
-    def forward(self,
-                x,
-                rots,
-                trans,
-                lidar2img_rt=None,
-                bboxs=None,
-                post_rots=None,
-                post_trans=None,
-                aug_bboxs=None,
-                img_metas=None):
+    def forward(self, x, rots, trans, post_rots=None, post_trans=None):
         x, depth = self.get_voxels(x, rots, trans, post_rots,
                                    post_trans)  # [B, C, H, W, L]
         bev = self.s2c(x)
