@@ -227,6 +227,10 @@ def main(args):
 
     dic = cfg.to_dict()
     batch_size = dic.pop('batch_size')
+    uniform_output_enabled = dic['pdx_cfg'].get("uniform_output_enabled", False)
+    if uniform_output_enabled:
+        dic['pdx_cfg']['config'] = args.cfg
+
     save_interval = args.save_interval
     if save_interval is None:
         if cfg.iters:

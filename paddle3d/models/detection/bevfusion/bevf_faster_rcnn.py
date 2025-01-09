@@ -317,7 +317,7 @@ class BEVFFasterRCNN(MVXFasterRCNN):
             raise NotImplementedError
         return loss
 
-    def export(self, save_dir, **kwargs):
+    def export(self, save_dir, name='bevfusion', **kwargs):
         self.forward = self.export_forward
         self.pts_middle_encoder.export_model = True
         self.lift_splat_shot_vis.export_model = True
@@ -329,7 +329,14 @@ class BEVFFasterRCNN(MVXFasterRCNN):
             shape=[6, 4, 4], dtype='float32', name='lidar2img')
         input_spec = [pts_spec, img_spec, img_metas_spec]
 
-        save_path = os.path.join(save_dir, 'bevfusion')
-        paddle.jit.to_static(self, input_spec=input_spec)
-        paddle.jit.save(self, save_path)
+        save_path = os.path.join(save_dir, name)
+        export_with_new_pir = kwargs.get('export_with_new_pir', False)
+        if export_with_new_pir:
+            paddle.jit.to_static(self, input_spec=input_spec)
+            paddle.jit.save(self, save_path)
+        else:
+            with paddle.pir_utils.OldIrGuard():
+                paddle.jit.to_static(self, input_spec=input_spec)
+                paddle.jit.save(self, save_path)
+
         logger.info("Exported model is saved in {}".format(save_path))

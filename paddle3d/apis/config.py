@@ -270,6 +270,20 @@ class Config(object):
     def temporal_start_epoch(self) -> int:
         return self.dic.get('temporal_start_epoch', -1)
 
+    @property
+    def pdx_cfg(self) -> int:
+        pdx_cfg_dict = {}
+        pdx_cfg_dict['uniform_output_enabled'] = self.dic.get(
+            'uniform_output_enabled', False)
+        pdx_cfg_dict['pdx_model_name'] = self.dic.get('pdx_model_name', False)
+        inference_cfg = {}
+        val_dataset_cfg = self.dic.get('val_dataset', None)
+        if val_dataset_cfg:
+            transform_cfg = val_dataset_cfg.get('transforms', None)
+            inference_cfg['transforms'] = transform_cfg
+        pdx_cfg_dict['inference_config'] = inference_cfg
+        return pdx_cfg_dict
+
     def _load_component(self, com_name: str) -> Any:
         # lazy import
         import paddle3d.apis.manager as manager
@@ -369,7 +383,8 @@ class Config(object):
             'amp_cfg': self.amp_config,
             'ema_cfg': self.ema_config,
             # 'use_ema': self.use_ema,
-            'temporal_start_epoch': self.temporal_start_epoch
+            'temporal_start_epoch': self.temporal_start_epoch,
+            'pdx_cfg': self.pdx_cfg
         })
 
         return dic

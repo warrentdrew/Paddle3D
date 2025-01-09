@@ -14,6 +14,7 @@
 
 import copy
 import os
+import shutil
 import sys
 from collections import defaultdict
 from typing import Callable, Optional, Union
@@ -30,6 +31,7 @@ from paddle3d.utils.shm_utils import _get_shared_memory_size_in_M
 from paddle3d.utils.timer import Timer
 from paddle3d.utils.profiler import add_profiler_step
 from paddle3d.utils.ema import ModelEMA
+from paddle3d.utils.save_result import update_train_results, dump_infer_config
 
 
 def default_dataloader_build_fn(**kwargs) -> paddle.io.DataLoader:
@@ -128,7 +130,8 @@ class Trainer:
             amp_cfg: Optional[dict] = None,
             do_bind: Optional[bool] = False,
             temporal_start_epoch: Optional[int] = -1,
-            ema_cfg: Optional[dict] = None):
+            ema_cfg: Optional[dict] = None,
+            pdx_cfg: Optional[dict] = None):
 
         self.model = model
         self.optimizer = optimizer
@@ -150,6 +153,7 @@ class Trainer:
 
         self.do_bind = do_bind
         self.temporal_start_epoch = temporal_start_epoch
+        self.pdx_cfg = pdx_cfg
 
         if iters is None:
             self.epochs = epochs
@@ -449,6 +453,63 @@ class Trainer:
 
                     self.checkpoint.record('iters', self.cur_iter)
                     self.checkpoint.record('epochs', self.cur_epoch)
+
+                    uniform_output_enabled = self.pdx_cfg.get(
+                        "uniform_output_enabled", False)
+                    if uniform_output_enabled:
+                        # model export
+                        export_model = copy.deepcopy(self.model)
+                        export_model.eval()
+                        arg_dict = {} if not hasattr(
+                            export_model.export,
+                            'arg_dict') else export_model.export.arg_dict
+                        kwargs = {
+                            key[2:]: self.pdx_cfg.get(key[2:], None)
+                            for key in arg_dict
+                        }
+                        savepath = os.path.join(self.checkpoint.rootdir, tag,
+                                                'inference')
+                        kwargs['export_with_new_pir'] = self.pdx_cfg.get(
+                            'export_with_pir', False)
+                        export_model.export(
+                            savepath, name='inference', **kwargs)
+
+                        # save inference.yml
+                        dump_infer_config(
+                            self.pdx_cfg, os.path.join(savepath,
+                                                       'inference.yml'))
+
+                        # save training result
+                        metric_info = {
+                            "mAP": 0.0,
+                            "NDS": 0.0,
+                            "epoch": self.cur_epoch
+                        }
+                        if status.do_eval:
+                            metric_info['mAP'] = metrics['mean_ap']
+                            metric_info['NDS'] = metrics['nd_score']
+                        update_train_results(
+                            self.checkpoint.rootdir,
+                            self.pdx_cfg['pdx_model_name'],
+                            "epoch_{}".format(self.cur_epoch),
+                            metric_info,
+                            ema=self.use_ema
+                        )  # update train result for last epoch
+                        update_train_results(
+                            self.checkpoint.rootdir,
+                            self.pdx_cfg['pdx_model_name'],
+                            "best_model",
+                            metric_info,
+                            ema=self.use_ema
+                        )  # update train result for best epoch (same as last)
+                        self.model.train()
+
+                        # save training config
+                        config_name = os.path.basename(self.pdx_cfg['config'])
+                        config_savepath = os.path.join(self.checkpoint.rootdir,
+                                                       config_name)
+                        if not os.path.exists(config_savepath):
+                            shutil.copy(self.pdx_cfg['config'], config_savepath)
 
                 timer.update()
 
