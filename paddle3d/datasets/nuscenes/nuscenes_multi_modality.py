@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pickle
-
+import os
 import numpy as np
 
 import paddle3d.transforms as T
@@ -50,7 +50,8 @@ class NuscenesMMDataset(NuscenesDetDataset):
             extrinsics_noise_type='single',
             drop_frames=False,
             drop_set=[0, 'discrete'],
-            noise_sensor_type='camera'):
+            noise_sensor_type='camera',
+            datart_prefix = False):
 
         self.load_interval = load_interval
         self.use_valid_flag = use_valid_flag
@@ -90,6 +91,7 @@ class NuscenesMMDataset(NuscenesDetDataset):
         self.drop_ratio = drop_set[0]
         self.drop_type = drop_set[1]
         self.noise_sensor_type = noise_sensor_type
+        self.datart_prefix = datart_prefix
 
         if self.extrinsics_noise or self.drop_frames:
             raise NotImplementedError
@@ -213,7 +215,12 @@ class NuscenesMMDataset(NuscenesDetDataset):
         sample.sample_idx = info['token']
         sample.meta.id = info['token']
         sample.pts_filename = info['lidar_path']
+        if self.datart_prefix:
+            sample.pts_filename = os.path.join(self.data_root, sample.pts_filename)
         sample.sweeps = info['sweeps']
+        if self.datart_prefix:
+            for sweep in sample.sweeps:
+                sweep['data_path'] = os.path.join(self.data_root, sweep['data_path'])
         sample.timestamp = info['timestamp'] / 1e6
 
         if self.noise_sensor_type == 'lidar':
@@ -260,7 +267,8 @@ class NuscenesMMDataset(NuscenesDetDataset):
                             if replace_file != '':
                                 cam_data_path = cam_data_path.replace(
                                     file_name, replace_file)
-
+                if self.datart_prefix:
+                    cam_data_path = os.path.join(self.data_root, cam_data_path)
                 image_paths.append(cam_data_path)
                 # obtain lidar to image transformation matrix
                 if self.extrinsics_noise:
