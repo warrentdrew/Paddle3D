@@ -17,8 +17,6 @@ from functools import partial
 
 from setuptools import find_packages, setup
 
-import paddle3d
-
 with open("requirements.txt") as fin:
     REQUIRED_PACKAGES = fin.read()
 
@@ -55,7 +53,7 @@ get_cpp_files = partial(
 
 setup(
     name='paddle3d',
-    version=paddle3d.__version__.replace('-', ''),
+    version='0.0.0',
     # TODO: add description
     description=(''),
     long_description='',
