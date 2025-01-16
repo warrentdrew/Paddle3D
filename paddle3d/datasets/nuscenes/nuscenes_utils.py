@@ -163,6 +163,12 @@ def second_bbox_to_nuscenes_box(pred_sample: Sample):
     """
     This function refers to https://github.com/tianweiy/CenterPoint/blob/master/det3d/datasets/nuscenes/nusc_common.py#L160
     """
+    if len(pred_sample.bboxes_3d) == 0:
+        # for no pred boxes cases, add a fake pred result
+        pred_sample.bboxes_3d = BBoxes3D(
+            np.array([[-1, -1, -1, 0, 0, 0, 0]]), velocities=np.array([[0, 0]]))
+        pred_sample.labels = np.array([-1])
+        pred_sample.confidences = np.array([0])
     pred_sample.bboxes_3d[:, -1] = -pred_sample.bboxes_3d[:, -1] - np.pi / 2
     nuscenes_box_list = []
     for i in range(pred_sample.bboxes_3d.shape[0]):
